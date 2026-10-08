@@ -13,8 +13,6 @@ conexion = mysql.connector.connect(
     database="miagua"
 )
 
-
-
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
 
