@@ -1,6 +1,5 @@
 import telebot
 from telebot import types
-import mysql.connector
 from datetime import datetime
 
 import os
@@ -38,16 +37,11 @@ cliente = gspread.authorize(credenciales)
 
 hoja = cliente.open("Miagua - Registro de Ventas").worksheet("Ventas")
 
-bot = telebot.TeleBot("8849822777:AAHmsM5lCkXzY-5roWkTl2HGIvRj0phKRVY")
+TOKEN_TELEGRAM = os.getenv("TOKEN_TELEGRAM")
+
+bot = telebot.TeleBot(TOKEN_TELEGRAM)
 
 esperando_venta = set()
-
-conexion = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="Reyes41879!123",
-    database="miagua"
-)
 
 @bot.message_handler(commands=['start', 'help'])
 def send_welcome(message):
