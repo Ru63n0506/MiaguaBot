@@ -320,12 +320,6 @@ async def manejar_texto(
         await consultar_ventas(update, context)
         return
 
-    if texto in ["Corte del Día", "Clientes"]:
-        await mensaje.reply_text(
-            "Esta opción todavía está en desarrollo."
-        )
-        return
-
     if texto == "Corte del Día":
         await corte_del_dia(update, context)
         return
