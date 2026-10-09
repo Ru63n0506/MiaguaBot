@@ -13,9 +13,18 @@ from telegram.ext import (
     CommandHandler,
     MessageHandler,
     ContextTypes,
+    TypeHandler,
     filters
 )
 
+# =========================================
+# PERMISOS DE USUARIOS
+# =========================================
+
+USUARIOS_AUTORIZADOS = {
+    123456789,  # Reemplaza por tu ID de Telegram
+    987654321,  # Agrega aquí otro usuario autorizado
+}
 
 # ==========================================
 # 1. CREDENCIALES DE GOOGLE SHEETS
@@ -67,6 +76,21 @@ if not URL_RENDER:
 
 PUERTO = int(os.getenv("PORT", "10000"))
 
+# ==========================================
+# FUNCION QUE COMPRUEBA LOS PERMISOS
+# ==========================================
+
+async def controlar_acceso(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    usuario = update.effective_user
+
+    if usuario and usuario.id not in USUARIOS_AUTORIZADOS:
+        if update.effective_message:
+            await update.effective_message.reply_text(
+                "⛔ No tienes autorización para utilizar MiaguaBot."
+            )
+
+        from telegram.ext import ApplicationHandlerStop
+        raise ApplicationHandlerStop
 
 # ==========================================
 # 3. COMANDO /start Y /help
@@ -212,6 +236,11 @@ def main():
         Application.builder()
         .token(TOKEN_TELEGRAM)
         .build()
+    )
+
+    application.add_handler(
+    TypeHandler(Update, controlar_acceso),
+    group=-1
     )
 
     application.add_handler(
