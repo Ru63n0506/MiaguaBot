@@ -136,6 +136,44 @@ async def send_hola(
         "¡Hola! ¿Cómo estás?"
     )
 
+# ==========================================
+# * CONSULTAR VENTAS
+# ==========================================
+
+
+async def consultar_ventas(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    mensaje = update.effective_message
+
+    # Obtener todas las ventas de Google Sheets
+    registros = hoja.get_all_records()
+
+    if not registros:
+        await mensaje.reply_text(
+            "Todavía no hay ventas registradas."
+        )
+        return
+
+    # Seleccionar las últimas 10 ventas
+    ultimas_ventas = registros[-10:]
+    ultimas_ventas.reverse()
+
+    respuesta = "📋 ÚLTIMAS VENTAS\n\n"
+
+    for venta in ultimas_ventas:
+        fecha = venta.get("Fecha", "Sin fecha")
+        cliente = venta.get("Cliente", "Sin cliente")
+        garrafones = venta.get("Garrafones", 0)
+        total = venta.get("Total", 0)
+
+        respuesta += (
+            f"📅 Fecha: {fecha}\n"
+            f"👤 Cliente: {cliente}\n"
+            f"💧 Garrafones: {garrafones}\n"
+            f"💰 Total: ${total}\n"
+            f"━━━━━━━━━━━━━━\n"
+        )
+
+    await mensaje.reply_text(respuesta)
 
 # ==========================================
 # 5. PROCESAMIENTO DE MENSAJES
@@ -219,16 +257,16 @@ async def manejar_texto(
 
         return
 
-    # Opciones pendientes de implementar
-    if texto in [
-        "Consultar Ventas",
-        "Corte del Día",
-        "Clientes"
-    ]:
+    # Selección de Consultar Ventas    
+    if texto == "Consultar Ventas":
+        await consultar_ventas(update, context)
+        return
 
+    if texto in ["Corte del Día", "Clientes"]:
         await mensaje.reply_text(
             "Esta opción todavía está en desarrollo."
         )
+        return
 
 
 # ==========================================
