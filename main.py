@@ -9,29 +9,24 @@ import base64
 import gspread
 from google.oauth2.service_account import Credentials
 
-if os.getenv("GOOGLE_CREDENTIALS_BASE64"):
-    contenido = os.getenv("GOOGLE_CREDENTIALS_BASE64")
+contenido = os.getenv("GOOGLE_CREDENTIALS_BASE64")
 
-    datos_credenciales = json.loads(
-        base64.b64decode(contenido).decode("utf-8")
+if not contenido:
+    raise RuntimeError(
+        "Falta configurar GOOGLE_CREDENTIALS_BASE64 en Render."
     )
 
-    credenciales = Credentials.from_service_account_info(
-        datos_credenciales,
-        scopes=[
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive"
-        ]
-    )
+datos_credenciales = json.loads(
+    base64.b64decode(contenido).decode("utf-8")
+)
 
-else:
-    credenciales = Credentials.from_service_account_file(
-        "miaguabottele-5937ab6909da.json",
-        scopes=[
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive"
-        ]
-    )
+credenciales = Credentials.from_service_account_info(
+    datos_credenciales,
+    scopes=[
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
+)
 
 cliente = gspread.authorize(credenciales)
 
