@@ -21,10 +21,15 @@ from telegram.ext import (
 # PERMISOS DE USUARIOS
 # =========================================
 
+usuarios_texto = os.getenv("USUARIOS_AUTORIZADOS", "")
+
 USUARIOS_AUTORIZADOS = {
-    123456789,  # Reemplaza por tu ID de Telegram
-    987654321,  # Agrega aquí otro usuario autorizado
+    int(usuario.strip())
+    for usuario in usuarios_texto.split(",")
+    if usuario.strip()
 }
+
+print(f"Usuarios autorizados cargados: {len(USUARIOS_AUTORIZADOS)}")
 
 # ==========================================
 # 1. CREDENCIALES DE GOOGLE SHEETS
