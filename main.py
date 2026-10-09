@@ -234,6 +234,53 @@ async def corte_del_dia(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # ==========================================
+# * Clientes
+# ==========================================
+
+async def consultar_clientes(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    mensaje = update.effective_message
+
+    # Obtener las ventas registradas en Google Sheets
+    registros = hoja.get_all_records()
+
+    if not registros:
+        await mensaje.reply_text(
+            "Todavía no hay clientes registrados."
+        )
+        return
+
+    # Obtener los nombres sin repetirlos
+    clientes = set()
+
+    for venta in registros:
+        nombre = str(venta.get("Cliente", "")).strip()
+
+        if nombre:
+            clientes.add(nombre)
+
+    if not clientes:
+        await mensaje.reply_text(
+            "Todavía no hay clientes registrados."
+        )
+        return
+
+    # Ordenar los nombres alfabéticamente
+    clientes_ordenados = sorted(
+        clientes,
+        key=str.casefold
+    )
+
+    respuesta = (
+        f"👥 CLIENTES REGISTRADOS\n\n"
+        f"Total de clientes: {len(clientes_ordenados)}\n\n"
+    )
+
+    for numero, nombre in enumerate(clientes_ordenados, start=1):
+        respuesta += f"{numero}. {nombre}\n"
+
+    await mensaje.reply_text(respuesta)
+
+# ==========================================
 # 5. PROCESAMIENTO DE MENSAJES
 # ==========================================
 
@@ -325,9 +372,7 @@ async def manejar_texto(
         return
 
     if texto == "Clientes":
-        await mensaje.reply_text(
-            "La opción Clientes todavía está en desarrollo."
-        )
+        await consultar_clientes(update, context)
         return
 
 # ==========================================
