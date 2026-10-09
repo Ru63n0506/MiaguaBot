@@ -1,6 +1,42 @@
 import telebot
 from telebot import types
 import mysql.connector
+from datetime import datetime
+
+import os
+import json
+import base64
+
+import gspread
+from google.oauth2.service_account import Credentials
+
+if os.getenv("GOOGLE_CREDENTIALS_BASE64"):
+    contenido = os.getenv("GOOGLE_CREDENTIALS_BASE64")
+
+    datos_credenciales = json.loads(
+        base64.b64decode(contenido).decode("utf-8")
+    )
+
+    credenciales = Credentials.from_service_account_info(
+        datos_credenciales,
+        scopes=[
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
+    )
+
+else:
+    credenciales = Credentials.from_service_account_file(
+        "miaguabottele-5937ab6909da.json",
+        scopes=[
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
+    )
+
+cliente = gspread.authorize(credenciales)
+
+hoja = cliente.open("Miagua - Registro de Ventas").worksheet("Ventas")
 
 bot = telebot.TeleBot("8849822777:AAHmsM5lCkXzY-5roWkTl2HGIvRj0phKRVY")
 
@@ -65,20 +101,13 @@ def recibir_venta(message):
     cliente = datos[1].strip()
     total = datos[2].strip()
 
-    cursor = conexion.cursor()
-
-    sql = """
-    INSERT INTO ventas (num_garrafones, cliente, total)
-    VALUES (%s, %s, %s)
-    """
-
-    valores = (cantidad, cliente, total)
-
-    cursor.execute(sql, valores)
-
-    conexion.commit()
-
-    cursor.close()
+    hoja.append_row([
+    "", 
+    datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+    cliente,
+    int(cantidad),
+    float(total)
+    ])
 
     esperando_venta.remove(message.chat.id)
 
