@@ -176,6 +176,64 @@ async def consultar_ventas(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await mensaje.reply_text(respuesta)
 
 # ==========================================
+# * Corte del Día
+# ==========================================
+
+async def corte_del_dia(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    mensaje = update.effective_message
+
+    # Obtener las ventas registradas
+    registros = hoja.get_all_records()
+
+    # Fecha actual del servidor
+    hoy = datetime.now().date()
+
+    ventas_hoy = []
+
+    for venta in registros:
+        fecha_texto = str(venta.get("Fecha", "")).strip()
+
+        try:
+            fecha_venta = datetime.strptime(
+                fecha_texto,
+                "%d/%m/%Y %H:%M:%S"
+            ).date()
+        except ValueError:
+            continue
+
+        if fecha_venta == hoy:
+            ventas_hoy.append(venta)
+
+    # Si no hubo ventas hoy
+    if not ventas_hoy:
+        await mensaje.reply_text(
+            "📊 CORTE DEL DÍA\n\n"
+            f"Fecha: {hoy.strftime('%d/%m/%Y')}\n\n"
+            "No hay ventas registradas durante el día de hoy."
+        )
+        return
+
+    # Calcular totales
+    cantidad_ventas = len(ventas_hoy)
+    total_garrafones = sum(
+        int(venta.get("Garrafones", 0) or 0)
+        for venta in ventas_hoy
+    )
+    total_dinero = sum(
+        float(venta.get("Total", 0) or 0)
+        for venta in ventas_hoy
+    )
+
+    # Mostrar resultados
+    await mensaje.reply_text(
+        "📊 CORTE DEL DÍA\n\n"
+        f"📅 Fecha: {hoy.strftime('%d/%m/%Y')}\n"
+        f"🧾 Ventas realizadas: {cantidad_ventas}\n"
+        f"💧 Garrafones vendidos: {total_garrafones}\n"
+        f"💰 Total vendido: ${total_dinero:,.2f}"
+    )
+
+# ==========================================
 # 5. PROCESAMIENTO DE MENSAJES
 # ==========================================
 
@@ -268,6 +326,15 @@ async def manejar_texto(
         )
         return
 
+    if texto == "Corte del Día":
+        await corte_del_dia(update, context)
+        return
+
+    if texto == "Clientes":
+        await mensaje.reply_text(
+            "La opción Clientes todavía está en desarrollo."
+        )
+        return
 
 # ==========================================
 # 6. INICIALIZACIÓN DEL BOT
