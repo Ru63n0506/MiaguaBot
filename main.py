@@ -2,6 +2,9 @@ import os
 import json
 import base64
 from datetime import datetime
+from zoneinfo import ZoneInfo
+
+ZONA_HORARIA = ZoneInfo("America/Mexico_City")
 
 import gspread
 from google.oauth2.service_account import Credentials
@@ -185,7 +188,7 @@ async def corte_del_dia(update: Update, context: ContextTypes.DEFAULT_TYPE):
     registros = hoja.get_all_records()
 
     # Fecha actual del servidor
-    hoy = datetime.now().date()
+    hoy = datetime.now(ZONA_HORARIA).date()
 
     ventas_hoy = []
 
@@ -328,11 +331,11 @@ async def manejar_texto(
 
         # Guardar la venta en Google Sheets
         hoja.append_row([
-            datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+            datetime.now(ZONA_HORARIA).strftime("%d/%m/%Y %H:%M:%S"),
             nombre_cliente,
             cantidad,
             total
-        ])
+            ])
 
         context.user_data["esperando_venta"] = False
 
