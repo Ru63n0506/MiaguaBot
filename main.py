@@ -328,7 +328,6 @@ async def manejar_texto(
 
         # Guardar la venta en Google Sheets
         hoja.append_row([
-            "",
             datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
             nombre_cliente,
             cantidad,
