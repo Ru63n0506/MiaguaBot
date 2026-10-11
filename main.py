@@ -98,7 +98,7 @@ def mantener_despierto():
     
     while True:
         try:
-            time.sleep(600)  # Cada 10 minutos
+            time.sleep(30)  # Cada 30 segundos
             req = urllib.request.Request(
                 url,
                 headers={"User-Agent": "AutoPing-KeepAlive"}
@@ -424,10 +424,15 @@ async def manejar_texto(
 # ==========================================
 
 def main():
+    # Lanzar el hilo de auto-ping en segundo plano
+    hilo_ping = threading.Thread(target=mantener_despierto, daemon=True)
+    hilo_ping.start()
+    print("Hilo de auto-ping iniciado correctamente.")
 
     application = (
         Application.builder()
         .token(TOKEN_TELEGRAM)
+        .post_init(notificar_despertar)
         .build()
     )
 
