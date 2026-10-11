@@ -108,15 +108,15 @@ def mantener_despierto():
                 headers={"User-Agent": "AutoPing-KeepAlive"}
             )
             with urllib.request.urlopen(req, timeout=10) as response:
-                print(f"Auto-ping exitoso. Código: {response.status}")
+                print(f"Auto-ping exitoso. Código: {response.status}", flush=True)
                 
         except urllib.error.HTTPError as e:
             # Captura el 404 u otros códigos HTTP y los imprime en la consola de Render
-            print(f"Auto-ping activo (Servidor despierto, respondió con código: {e.code})")
+            print(f"Auto-ping activo (Servidor despierto, respondió con código: {e.code})", flush=True)
             
         except Exception as e:
             # Si hay un error de red real, también lo manda a la consola
-            print(f"Aviso de ping / Despertando: {e}")
+            print(f"Aviso de ping / Despertando: {e}", flush=True)
 
 # ==========================================
 # NOTIFICACIÓN DE INICIO (DESPERTAR)
@@ -127,7 +127,7 @@ async def notificar_despertar(application: Application):
     if USUARIOS_AUTORIZADOS:
         # Toma el primer usuario autorizado de la lista para enviarle la alerta
         admin_id = list(USUARIOS_AUTORIZADOS)[0]
-        try:
+        try: 
             await application.bot.send_message(
                 chat_id=admin_id,
                 text="🟢 **¡El bot se ha despertado y está en línea!**\n\nListo para recibir operaciones."
