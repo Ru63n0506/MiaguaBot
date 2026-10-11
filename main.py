@@ -92,47 +92,31 @@ PUERTO = int(os.getenv("PORT", "10000"))
 # ==========================================
 
 def mantener_despierto():
-    """Hace una petición HTTP a sí mismo y avisa por Telegram."""
+    """Hace una petición HTTP a sí mismo y manda el estatus a la consola de Render."""
     url_render = os.getenv("RENDER_EXTERNAL_URL")
-    token = os.getenv("TOKEN_TELEGRAM")
-    
-    if not url_render or not token or not USUARIOS_AUTORIZADOS:
+    if not url_render:
         return
-    
-    admin_id = list(USUARIOS_AUTORIZADOS)[0]
     
     while True:
         try:
-            # Recuerda que esto está en 30 para tus pruebas, luego cámbialo a 600
+            # NOTA: Recuerda que esto está en 30 para tus pruebas, 
+            # luego cámbialo a 600 para producción (10 minutos).
             time.sleep(30)  
             
-            # 1. Hace el auto-ping a Render
             req = urllib.request.Request(
                 url_render,
                 headers={"User-Agent": "AutoPing-KeepAlive"}
             )
             with urllib.request.urlopen(req, timeout=10) as response:
-                estado = response.status
+                print(f"Auto-ping exitoso. Código: {response.status}")
                 
-                # 2. Si quieres que te avise en el chat cada vez que hace ping con éxito:
-                # (Nota: Si lo dejas en 30 segundos, te llegará un mensaje cada 30 segundos).
-                mensaje_telegram = f"🔄 Auto-ping exitoso (Estado: {estado})"
-                enviar_aviso_telegram(token, admin_id, mensaje_telegram)
-                
+        except urllib.error.HTTPError as e:
+            # Captura el 404 u otros códigos HTTP y los imprime en la consola de Render
+            print(f"Auto-ping activo (Servidor despierto, respondió con código: {e.code})")
+            
         except Exception as e:
-            # Si hay un error (por ejemplo, si se está despertando), te avisa al chat
-            mensaje_error = f"⚠️ Aviso de ping / Despertando: {e}"
-            enviar_aviso_telegram(token, admin_id, mensaje_error)
-
-def enviar_aviso_telegram(token, chat_id, texto):
-    """Función auxiliar para mandar mensajes desde el hilo secundario."""
-    try:
-        api_url = f"https://api.telegram.org/bot{token}/sendMessage"
-        data = urllib.parse.urlencode({"chat_id": chat_id, "text": texto}).encode("utf-8")
-        req = urllib.request.Request(api_url, data=data, method="POST")
-        urllib.request.urlopen(req, timeout=5)
-    except Exception as e:
-        print(f"No se pudo enviar el aviso de Telegram: {e}")
+            # Si hay un error de red real, también lo manda a la consola
+            print(f"Aviso de ping / Despertando: {e}")
 
 # ==========================================
 # NOTIFICACIÓN DE INICIO (DESPERTAR)
