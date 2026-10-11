@@ -4,6 +4,7 @@ import base64
 import threading
 import time
 import urllib.request
+import urllib.parse
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -91,22 +92,47 @@ PUERTO = int(os.getenv("PORT", "10000"))
 # ==========================================
 
 def mantener_despierto():
-    """Hace una petición HTTP a sí mismo cada 10 minutos para evitar el modo reposo."""
-    url = os.getenv("RENDER_EXTERNAL_URL")
-    if not url:
+    """Hace una petición HTTP a sí mismo y avisa por Telegram."""
+    url_render = os.getenv("RENDER_EXTERNAL_URL")
+    token = os.getenv("TOKEN_TELEGRAM")
+    
+    if not url_render or not token or not USUARIOS_AUTORIZADOS:
         return
+    
+    admin_id = list(USUARIOS_AUTORIZADOS)[0]
     
     while True:
         try:
-            time.sleep(30)  # Cada 30 segundos
+            # Recuerda que esto está en 30 para tus pruebas, luego cámbialo a 600
+            time.sleep(30)  
+            
+            # 1. Hace el auto-ping a Render
             req = urllib.request.Request(
-                url,
+                url_render,
                 headers={"User-Agent": "AutoPing-KeepAlive"}
             )
             with urllib.request.urlopen(req, timeout=10) as response:
-                print(f"Auto-ping enviado con éxito. Estado: {response.status}")
+                estado = response.status
+                
+                # 2. Si quieres que te avise en el chat cada vez que hace ping con éxito:
+                # (Nota: Si lo dejas en 30 segundos, te llegará un mensaje cada 30 segundos).
+                mensaje_telegram = f"🔄 Auto-ping exitoso (Estado: {estado})"
+                enviar_aviso_telegram(token, admin_id, mensaje_telegram)
+                
         except Exception as e:
-            print(f"Error en auto-ping: {e}")
+            # Si hay un error (por ejemplo, si se está despertando), te avisa al chat
+            mensaje_error = f"⚠️ Aviso de ping / Despertando: {e}"
+            enviar_aviso_telegram(token, admin_id, mensaje_error)
+
+def enviar_aviso_telegram(token, chat_id, texto):
+    """Función auxiliar para mandar mensajes desde el hilo secundario."""
+    try:
+        api_url = f"https://api.telegram.org/bot{token}/sendMessage"
+        data = urllib.parse.urlencode({"chat_id": chat_id, "text": texto}).encode("utf-8")
+        req = urllib.request.Request(api_url, data=data, method="POST")
+        urllib.request.urlopen(req, timeout=5)
+    except Exception as e:
+        print(f"No se pudo enviar el aviso de Telegram: {e}")
 
 # ==========================================
 # NOTIFICACIÓN DE INICIO (DESPERTAR)
