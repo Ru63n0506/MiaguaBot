@@ -1,6 +1,9 @@
 import os
 import json
 import base64
+import threading
+import time
+import urllib.request
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -82,6 +85,46 @@ if not URL_RENDER:
     )
 
 PUERTO = int(os.getenv("PORT", "10000"))
+
+# ==========================================
+# AUTO-PING PARA EVITAR QUE RENDER SE DUERMA
+# ==========================================
+
+def mantener_despierto():
+    """Hace una petición HTTP a sí mismo cada 10 minutos para evitar el modo reposo."""
+    url = os.getenv("RENDER_EXTERNAL_URL")
+    if not url:
+        return
+    
+    while True:
+        try:
+            time.sleep(600)  # Cada 10 minutos
+            req = urllib.request.Request(
+                url,
+                headers={"User-Agent": "AutoPing-KeepAlive"}
+            )
+            with urllib.request.urlopen(req, timeout=10) as response:
+                print(f"Auto-ping enviado con éxito. Estado: {response.status}")
+        except Exception as e:
+            print(f"Error en auto-ping: {e}")
+
+# ==========================================
+# NOTIFICACIÓN DE INICIO (DESPERTAR)
+# ==========================================
+
+async def notificar_despertar(application: Application):
+    """Se ejecuta automáticamente cuando el bot se enciende/despierta."""
+    if USUARIOS_AUTORIZADOS:
+        # Toma el primer usuario autorizado de la lista para enviarle la alerta
+        admin_id = list(USUARIOS_AUTORIZADOS)[0]
+        try:
+            await application.bot.send_message(
+                chat_id=admin_id,
+                text="🟢 **¡El bot se ha despertado y está en línea!**\n\nListo para recibir operaciones."
+            )
+            print("Notificación de encendido enviada con éxito.")
+        except Exception as e:
+            print(f"No se pudo enviar la notificación de inicio: {e}")
 
 # ==========================================
 # FUNCION QUE COMPRUEBA LOS PERMISOS
