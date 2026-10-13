@@ -350,21 +350,17 @@ async def manejar_texto(
     # Si el usuario está registrando una venta
     if context.user_data.get("esperando_venta"):
 
-        datos = texto.split(maxsplit=2)
+        try:
+            cantidad_texto, resto = texto.split(maxsplit=1)
+            nombre_cliente, total_texto = resto.rsplit(maxsplit=1)
 
-        if len(datos) != 3:
+        except ValueError:
             await mensaje.reply_text(
                 "Formato incorrecto.\n\n"
                 "Escribe:\n"
-                "Garrafones Cliente Total\n\n"
-                "Ejemplo:\n"
-                "5 Juan Pérez 100"
+                "Garrafones Nombre del cliente Total\n\n"
             )
             return
-
-        cantidad_texto = datos[0]
-        nombre_cliente = datos[1]
-        total_texto = datos[2]
 
         try:
             cantidad = int(cantidad_texto)
@@ -407,11 +403,7 @@ async def manejar_texto(
         context.user_data["esperando_venta"] = True
 
         await mensaje.reply_text(
-            "Nueva Venta\n\n"
-            "Escribe los datos en este formato:\n\n"
-            "Garrafones Cliente Total\n\n"
-            "Ejemplo:\n"
-            "5 Juan Pérez 100"
+            "Registra una Venta\n\n"
         )
 
         return
