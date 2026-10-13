@@ -38,6 +38,21 @@ USUARIOS_AUTORIZADOS = {
 print(f"Usuarios autorizados cargados: {len(USUARIOS_AUTORIZADOS)}")
 
 # ==========================================
+# VENDEDORES AUTORIZADOS (PARA REGISTRAR VENTAS)
+# =========================================
+
+vendedores_texto = os.getenv("VENDEDORES", "")
+
+VENDEDORES = {}
+
+for vendedor in vendedores_texto.split(","):
+    if ":" in vendedor:
+        usuario_id, nombre = vendedor.split(":", 1)
+        VENDEDORES[int(usuario_id.strip())] = nombre.strip()
+
+print(f"Vendedores autorizados cargados: {len(VENDEDORES)}")
+
+# ==========================================
 # 1. CREDENCIALES DE GOOGLE SHEETS
 # ==========================================
 
@@ -378,12 +393,24 @@ async def manejar_texto(
             )
             return
 
+        usuario = update.effective_user
+
+        if not usuario or usuario.id not in VENDEDORES:
+            await mensaje.reply_text(
+                "No tienes un vendedor asignado. "
+                "Contacta al administrador."
+            )
+            return
+
+        nombre_vendedor = VENDEDORES[usuario.id]
+
         # Guardar la venta en Google Sheets
         hoja.append_row([
             datetime.now(ZONA_HORARIA).strftime("%d/%m/%Y %H:%M:%S"),
             nombre_cliente,
             cantidad,
-            total
+            total,
+            nombre_vendedor
             ])
 
         context.user_data["esperando_venta"] = False
