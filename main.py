@@ -178,7 +178,7 @@ async def send_welcome(
 
     teclado = [
         ["Registrar Venta", "Consultar Ventas"],
-        ["Corte del Día", "Corte de otro Día"],
+        ["Corte del Día", "Corte de otro día"],
         ["Clientes"]
     ]
 
@@ -430,7 +430,16 @@ async def manejar_texto(
     texto = mensaje.text.strip()
 
     # Si el usuario está seleccionando una fecha para el corte
-    if context.user_data.get("esperando_fecha_corte"):
+    if (
+    context.user_data.get("esperando_fecha_corte")
+    and texto not in [
+        "Registrar Venta",
+        "Consultar Ventas",
+        "Corte del Día",
+        "Corte de otro día",
+        "Clientes"
+    ]
+    ):
 
         try:
             fecha_consulta = datetime.strptime(
@@ -533,6 +542,12 @@ async def manejar_texto(
     # Selección de Consultar Ventas    
     if texto == "Consultar Ventas":
         await consultar_ventas(update, context)
+        return
+
+    # Selección de Corte del Día
+    if texto == "Corte del Día":
+        context.user_data["esperando_fecha_corte"] = False
+        await corte_del_dia(update, context)
         return
 
     if texto == "Corte de otro día":
