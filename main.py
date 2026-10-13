@@ -178,7 +178,8 @@ async def send_welcome(
 
     teclado = [
         ["Registrar Venta", "Consultar Ventas"],
-        ["Corte del Día", "Clientes"]
+        ["Corte del Día", "Corte de otro Día"],
+        ["Clientes"]
     ]
 
     menu = ReplyKeyboardMarkup(
@@ -249,14 +250,18 @@ async def consultar_ventas(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # * Corte del Día
 # ==========================================
 
-async def corte_del_dia(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def corte_del_dia(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE,
+    fecha_consulta=None
+):
     mensaje = update.effective_message
 
-    # Obtener las ventas registradas
+    # Obtener las ventas registradas en Google Sheets
     registros = hoja.get_all_records()
 
-    # Fecha actual del servidor
-    hoy = datetime.now(ZONA_HORARIA).date()
+    # Fecha actual de Puebla / Ciudad de México
+    hoy = fecha_consulta or datetime.now(ZONA_HORARIA).date()
 
     ventas_hoy = []
 
@@ -278,30 +283,72 @@ async def corte_del_dia(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not ventas_hoy:
         await mensaje.reply_text(
             "📊 CORTE DEL DÍA\n\n"
-            f"Fecha: {hoy.strftime('%d/%m/%Y')}\n\n"
+            f"📅 Fecha: {hoy.strftime('%d/%m/%Y')}\n\n"
             "No hay ventas registradas durante el día de hoy."
         )
         return
 
-    # Calcular totales
-    cantidad_ventas = len(ventas_hoy)
-    total_garrafones = sum(
-        int(venta.get("Garrafones", 0) or 0)
-        for venta in ventas_hoy
-    )
-    total_dinero = sum(
-        float(venta.get("Total", 0) or 0)
-        for venta in ventas_hoy
+    # Totales generales
+    total_garrafones = 0
+    total_dinero = 0.0
+
+    # Acumular ventas por vendedor
+    desglose_vendedores = {}
+
+    for venta in ventas_hoy:
+        cantidad = int(venta.get("Garrafones", 0) or 0)
+        dinero = float(venta.get("Total", 0) or 0)
+        nombre_vendedor = str(
+            venta.get("Vendedor", "")
+        ).strip()
+
+        # Evitar dejar ventas sin identificar
+        if not nombre_vendedor:
+            nombre_vendedor = "Sin vendedor asignado"
+
+        total_garrafones += cantidad
+        total_dinero += dinero
+
+        if nombre_vendedor not in desglose_vendedores:
+            desglose_vendedores[nombre_vendedor] = {
+                "garrafones": 0,
+                "dinero": 0.0
+            }
+
+        desglose_vendedores[nombre_vendedor]["garrafones"] += cantidad
+        desglose_vendedores[nombre_vendedor]["dinero"] += dinero
+
+    # Construir el mensaje del corte
+    respuesta = (
+        "📊 CORTE DEL DÍA\n"
+        f"📅 Fecha: {hoy.strftime('%d/%m/%Y')}\n\n"
+        "💧 TOTAL DE GARRAFONES VENDIDOS\n"
+        f"{total_garrafones} garrafones\n\n"
+        "💰 TOTAL DE DINERO\n"
+        f"${total_dinero:,.2f} MXN\n\n"
+        "📋 DESGLOSE POR VENDEDOR\n\n"
     )
 
-    # Mostrar resultados
-    await mensaje.reply_text(
-        "📊 CORTE DEL DÍA\n\n"
-        f"📅 Fecha: {hoy.strftime('%d/%m/%Y')}\n"
-        f"🧾 Ventas realizadas: {cantidad_ventas}\n"
-        f"💧 Garrafones vendidos: {total_garrafones}\n"
-        f"💰 Total vendido: ${total_dinero:,.2f}"
+    # Ordenar vendedores alfabéticamente
+    for nombre, datos in sorted(
+        desglose_vendedores.items(),
+        key=lambda elemento: elemento[0].casefold()
+    ):
+        respuesta += (
+            f"👤 {nombre}\n"
+            f"   💧 Garrafones: {datos['garrafones']}\n"
+            f"   💰 Dinero: ${datos['dinero']:,.2f} MXN\n"
+            "━━━━━━━━━━━━━━\n"
+        )
+
+    # Total final
+    respuesta += (
+        "🔹 TOTAL\n"
+        f"💧 Garrafones: {total_garrafones}\n"
+        f"💰 Dinero: ${total_dinero:,.2f} MXN"
     )
+
+    await mensaje.reply_text(respuesta)
 
 # ==========================================
 # * Clientes
@@ -351,6 +398,26 @@ async def consultar_clientes(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await mensaje.reply_text(respuesta)
 
 # ==========================================
+# * CORTES DE OTRO DÍA
+# ==========================================
+
+async def solicitar_corte_fecha(
+    update: Update,
+    context: ContextTypes.DEFAULT_TYPE
+):
+    mensaje = update.effective_message
+
+    # Activar el modo de consulta por fecha
+    context.user_data["esperando_fecha_corte"] = True
+
+    await mensaje.reply_text(
+        "📅 CORTE DE OTRO DÍA\n\n"
+        "Escribe la fecha que deseas consultar "
+        "en el formato DD/MM/AAAA.\n\n"
+        "Ejemplo: 10/10/2026"
+    )
+
+# ==========================================
 # 5. PROCESAMIENTO DE MENSAJES
 # ==========================================
 
@@ -361,6 +428,34 @@ async def manejar_texto(
 
     mensaje = update.effective_message
     texto = mensaje.text.strip()
+
+    # Si el usuario está seleccionando una fecha para el corte
+    if context.user_data.get("esperando_fecha_corte"):
+
+        try:
+            fecha_consulta = datetime.strptime(
+                texto,
+                "%d/%m/%Y"
+            ).date()
+
+        except ValueError:
+            await mensaje.reply_text(
+                "Fecha incorrecta.\n\n"
+                "Usa el formato DD/MM/AAAA.\n"
+                "Ejemplo: 10/10/2026"
+            )
+            return
+
+        # Desactivar el modo de selección de fecha
+        context.user_data["esperando_fecha_corte"] = False
+
+        # Generar el corte de la fecha elegida
+        await corte_del_dia(
+            update,
+            context,
+            fecha_consulta
+        )
+        return
 
     # Si el usuario está registrando una venta
     if context.user_data.get("esperando_venta"):
@@ -440,8 +535,8 @@ async def manejar_texto(
         await consultar_ventas(update, context)
         return
 
-    if texto == "Corte del Día":
-        await corte_del_dia(update, context)
+    if texto == "Corte de otro día":
+        await solicitar_corte_fecha(update, context)
         return
 
     if texto == "Clientes":
