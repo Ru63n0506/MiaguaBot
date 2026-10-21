@@ -579,7 +579,6 @@ async def manejar_texto(
 
         await mensaje.reply_text(
             "¡Venta registrada!\n\n"
-            f"ID de venta: {id_venta}\n"
             f"Garrafones: {cantidad}\n"
             f"Cliente: {nombre_cliente}\n"
             f"Total: ${total:.2f}"
