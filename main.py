@@ -7,8 +7,18 @@ import urllib.request
 import urllib.parse
 from datetime import datetime
 from zoneinfo import ZoneInfo
+import uuid;
 
 ZONA_HORARIA = ZoneInfo("America/Mexico_City")
+
+def generar_id_venta(fecha=None):
+    if fecha is None:
+        fecha = datetime.now(ZONA_HORARIA)
+
+    fecha_texto = fecha.strftime("%d-%m-%Y-%H-%M-%S")
+    sufijo = uuid.uuid4().hex[:8]
+
+    return f"{fecha_texto}-{sufijo}"
 
 import gspread
 from google.oauth2.service_account import Credentials
@@ -81,6 +91,40 @@ hoja = cliente_sheets.open(
     "Miagua - Registro de Ventas"
 ).worksheet("Ventas")
 
+# ==========================================
+# Completar ID´s ventas
+# ==========================================
+
+def completar_ids_ventas():
+    registros = hoja.get_all_values()
+
+    for numero_fila, fila in enumerate(registros[1:], start=2):
+
+        # Obtener el ID existente, si lo hay
+        id_existente = fila[5] if len(fila) > 5 else ""
+
+        # No modificar ventas que ya tienen ID
+        if id_existente.strip():
+            continue
+
+        # Recuperar la fecha original de la venta
+        fecha_texto = fila[0] if fila else ""
+
+        try:
+            fecha_venta = datetime.strptime(
+                fecha_texto,
+                "%d/%m/%Y %H:%M:%S"
+            )
+        except ValueError:
+            fecha_venta = datetime.now(ZONA_HORARIA)
+
+        # Generar y guardar el ID en la columna F
+        id_venta = generar_id_venta(fecha_venta)
+        hoja.update_cell(numero_fila, 6, id_venta)
+
+    print("Revisión de ID de ventas completada.")
+
+completar_ids_ventas()
 
 # ==========================================
 # 2. CONFIGURACIÓN DEL BOT
@@ -508,19 +552,25 @@ async def manejar_texto(
 
         nombre_vendedor = VENDEDORES[usuario.id]
 
+        # Generar fecha e ID de la venta
+        fecha_venta = datetime.now(ZONA_HORARIA)
+        id_venta = generar_id_venta(fecha_venta)
+
         # Guardar la venta en Google Sheets
         hoja.append_row([
-            datetime.now(ZONA_HORARIA).strftime("%d/%m/%Y %H:%M:%S"),
+            fecha_venta.strftime("%d/%m/%Y %H:%M:%S"),
             nombre_cliente,
             cantidad,
             total,
-            nombre_vendedor
-            ])
+            nombre_vendedor,
+            id_venta
+        ])
 
         context.user_data["esperando_venta"] = False
 
         await mensaje.reply_text(
             "¡Venta registrada!\n\n"
+            f"ID de venta: {id_venta}\n"
             f"Garrafones: {cantidad}\n"
             f"Cliente: {nombre_cliente}\n"
             f"Total: ${total:.2f}"
