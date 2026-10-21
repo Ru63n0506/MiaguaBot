@@ -97,14 +97,16 @@ hoja = cliente_sheets.open(
 
 def completar_ids_ventas():
     registros = hoja.get_all_values()
+    ids_columna = []
 
-    for numero_fila, fila in enumerate(registros[1:], start=2):
+    for fila in registros[1:]:
 
         # Obtener el ID existente, si lo hay
         id_existente = fila[5] if len(fila) > 5 else ""
 
-        # No modificar ventas que ya tienen ID
+        # Conservar el ID si ya existe
         if id_existente.strip():
+            ids_columna.append([id_existente])
             continue
 
         # Recuperar la fecha original de la venta
@@ -118,9 +120,16 @@ def completar_ids_ventas():
         except ValueError:
             fecha_venta = datetime.now(ZONA_HORARIA)
 
-        # Generar y guardar el ID en la columna F
+        # Generar el ID y prepararlo para guardarlo
         id_venta = generar_id_venta(fecha_venta)
-        hoja.update_cell(numero_fila, 6, id_venta)
+        ids_columna.append([id_venta])
+
+    # Guardar todos los IDs con una sola solicitud
+    if ids_columna:
+        hoja.update(
+            range_name=f"F2:F{len(registros)}",
+            values=ids_columna
+        )
 
     print("Revisión de ID de ventas completada.")
 
