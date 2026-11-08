@@ -274,10 +274,16 @@ async def consultar_ventas(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await mensaje.reply_text("Todavía no hay ventas registradas.")
         return
 
-    # 1. Obtener la fecha de hoy (ej: "07/11/2026")
-    hoy_str = datetime.now().strftime("%d/%m/%Y")
+    # 1. Obtener la fecha actual respetando la zona horaria de CDMX
+    ahora_cdmx = datetime.now(ZONA_HORARIA)
 
-    # 2. Filtrar registros que comiencen con la fecha de hoy (ignorando la hora para el filtro)
+    # 2. Formatear la fecha. 
+    # Asegúrate de que el formato coincida con cómo guardas la fecha en tu Google Sheet:
+    # Si se guarda con barras (ej. "07/11/2026"), usa "%d/%m/%Y"
+    # Si se guarda con guiones (ej. "07-11-2026"), usa "%d-%m-%Y"
+    hoy_str = ahora_cdmx.strftime("%d/%m/%Y")
+
+    # 3. Filtrar registros que comiencen con la fecha de hoy en CDMX
     ventas_hoy = [v for v in registros if str(v.get("Fecha", "")).startswith(hoy_str)]
 
     if not ventas_hoy:
@@ -290,7 +296,6 @@ async def consultar_ventas(update: Update, context: ContextTypes.DEFAULT_TYPE):
     respuesta = f"📋 VENTAS DE HOY ({hoy_str})\n\n"
 
     for venta in ventas_hoy:
-        # Aquí 'fecha' incluirá la hora tal cual está guardada en la celda
         fecha = venta.get("Fecha", "Sin fecha")
         cliente = venta.get("Cliente", "Sin cliente")
         garrafones = venta.get("Garrafones", 0)
