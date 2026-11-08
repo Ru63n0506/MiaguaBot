@@ -264,7 +264,6 @@ async def send_hola(
 # * CONSULTAR VENTAS
 # ==========================================
 
-
 async def consultar_ventas(update: Update, context: ContextTypes.DEFAULT_TYPE):
     mensaje = update.effective_message
 
@@ -272,25 +271,33 @@ async def consultar_ventas(update: Update, context: ContextTypes.DEFAULT_TYPE):
     registros = hoja.get_all_records()
 
     if not registros:
-        await mensaje.reply_text(
-            "Todavía no hay ventas registradas."
-        )
+        await mensaje.reply_text("Todavía no hay ventas registradas.")
         return
 
-    # Seleccionar las últimas 10 ventas
-    ultimas_ventas = registros[-10:]
-    ultimas_ventas.reverse()
+    # 1. Obtener la fecha de hoy (ej: "07/11/2026")
+    hoy_str = datetime.now().strftime("%d/%m/%Y")
 
-    respuesta = "📋 ÚLTIMAS VENTAS\n\n"
+    # 2. Filtrar registros que comiencen con la fecha de hoy (ignorando la hora para el filtro)
+    ventas_hoy = [v for v in registros if str(v.get("Fecha", "")).startswith(hoy_str)]
 
-    for venta in ultimas_ventas:
+    if not ventas_hoy:
+        await mensaje.reply_text(f"No hay ventas registradas el día de hoy ({hoy_str}).")
+        return
+
+    # Invertir para mostrar las más recientes primero
+    ventas_hoy.reverse()
+
+    respuesta = f"📋 VENTAS DE HOY ({hoy_str})\n\n"
+
+    for venta in ventas_hoy:
+        # Aquí 'fecha' incluirá la hora tal cual está guardada en la celda
         fecha = venta.get("Fecha", "Sin fecha")
         cliente = venta.get("Cliente", "Sin cliente")
         garrafones = venta.get("Garrafones", 0)
         total = venta.get("Total", 0)
 
         respuesta += (
-            f"📅 Fecha: {fecha}\n"
+            f"📅 Fecha/Hora: {fecha}\n"
             f"👤 Cliente: {cliente}\n"
             f"💧 Garrafones: {garrafones}\n"
             f"💰 Total: ${total}\n"
